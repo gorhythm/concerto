@@ -1,0 +1,35 @@
+// Copyright 2024 The Concerto Contributors.
+// This source code is licensed under the Apache 2.0 license found
+// in the LICENSE file in the root directory of this source tree.
+
+syntax = "proto3";
+
+package concerto.sample.calc.v1;
+
+option go_package = "github.com/gorhythm/concerto/sample/calc/concerto/proto/gen-go/concerto/sample/calc/v1;calc";
+
+service CalculatorService {
+  rpc Calculate(CalculateRequest) returns (CalculateResponse) {}
+}
+
+message CalculateRequest {
+  Op op = 1;
+  int64 num1 = 2 [jstype = JS_STRING];
+  int64 num2 = 3 [jstype = JS_STRING];
+}
+
+message CalculateResponse {
+  int64 result = 1 [jstype = JS_STRING];
+}
+
+// Op represents the type of arithmetic operation.
+enum Op {
+  // Add represents addition operation.
+  OP_ADD = 0;
+  // Subtract represents subtraction operation.
+  OP_SUBTRACT = 1;
+  // Multiply represents multiplication operation.
+  OP_MULTIPLY = 2;
+  // Divide represents division operation.
+  OP_DIVIDE = 3;
+}
