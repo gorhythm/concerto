@@ -5,8 +5,6 @@
 package endpoint
 
 import (
-	"slices"
-
 	"github.com/go-kit/kit/endpoint"
 )
 
@@ -15,17 +13,14 @@ type Config struct {
 	middlewares []endpoint.Middleware
 }
 
-// ApplyMiddlewares applies the configured middlewares to the provided
-// endpoint.
-func (c Config) ApplyMiddlewares(e endpoint.Endpoint) endpoint.Endpoint {
-	middlewares := slices.Clone(c.middlewares)
-	slices.Reverse(c.middlewares)
-
-	for i := len(middlewares) - 1; i >= 0; i-- {
-		e = middlewares[i](e)
+// Middleware returns a composed middlewares. Requests will traverse them in
+// the order they're declared.
+func (c Config) Middleware() endpoint.Middleware {
+	if len(c.middlewares) == 0 {
+		return nil
 	}
 
-	return e
+	return endpoint.Chain(c.middlewares[0], c.middlewares[1:]...)
 }
 
 // NewConfig applies all the options to a returned [Config].
@@ -49,13 +44,13 @@ func (fn optionFunc) apply(cfg Config) Config {
 	return fn(cfg)
 }
 
-// WithMiddlewares returns an [Option] that sets middlewares to the configured
-// endpoint.
+// WithMiddlewares returns an [Option] that appends middlewares to the
+// configured endpoint.
 func WithMiddlewares(
 	middlewares ...endpoint.Middleware,
 ) Option {
 	return optionFunc(func(c Config) Config {
-		c.middlewares = middlewares
+		c.middlewares = append(c.middlewares, middlewares...)
 		return c
 	})
 }

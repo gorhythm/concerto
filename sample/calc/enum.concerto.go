@@ -5,8 +5,8 @@
 package calc
 
 import (
-	"fmt"
-	"strconv"
+	ifmt "fmt"
+	istrconv "strconv"
 )
 
 // Enum value maps for Op.
@@ -30,7 +30,7 @@ func (x Op) String() string {
 		return str
 	}
 
-	return "%!Op(" + strconv.FormatInt(int64(x), 10) + ")"
+	return "%!Op(" + istrconv.FormatInt(int64(x), 10) + ")"
 }
 
 func OpFromString(s string) (Op, error) {
@@ -38,7 +38,7 @@ func OpFromString(s string) (Op, error) {
 		return v, nil
 	}
 
-	return Op(0), fmt.Errorf("not a valid Op string")
+	return Op(0), ifmt.Errorf("not a valid Op string")
 }
 
 func (x Op) MarshalText() ([]byte, error) {
@@ -46,7 +46,7 @@ func (x Op) MarshalText() ([]byte, error) {
 		return []byte(str), nil
 	}
 
-	return nil, fmt.Errorf("not a valid Op")
+	return nil, ifmt.Errorf("not a valid Op")
 }
 
 func (x *Op) UnmarshalText(text []byte) error {
@@ -60,14 +60,14 @@ func (x *Op) UnmarshalText(text []byte) error {
 
 func (x Op) MarshalJSON() ([]byte, error) {
 	if str, ok := _opName[x]; ok {
-		return []byte(strconv.Quote(str)), nil
+		return []byte(istrconv.Quote(str)), nil
 	}
 
-	return nil, fmt.Errorf("not a valid Op")
+	return nil, ifmt.Errorf("not a valid Op")
 }
 
 func (x *Op) UnmarshalJSON(text []byte) error {
-	str, err := strconv.Unquote(string(text))
+	str, err := istrconv.Unquote(string(text))
 	if err != nil {
 		return err
 	}

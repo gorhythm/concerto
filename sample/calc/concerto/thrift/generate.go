@@ -4,4 +4,4 @@
 
 package thrift
 
-//go:generate thrift --gen "go:package_prefix=github.com/gorhythm/concerto/sample/calc/concerto/thrift/gen-go/" idl/concerto.sample.calculator.v1.thrift
+//go:generate thrift  -I "../../../../types/thrift" -r --gen "go:package_prefix=github.com/gorhythm/concerto/sample/calc/concerto/thrift/gen-go/" idl/concerto.sample.calculator.v1.thrift

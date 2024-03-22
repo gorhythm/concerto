@@ -31,7 +31,7 @@ func TestTransport_String(t *testing.T) {
 	}
 }
 
-func TestTransportFromString(t *testing.T) {
+func TestFromString(t *testing.T) {
 	type args struct {
 		s string
 	}
@@ -51,7 +51,7 @@ func TestTransportFromString(t *testing.T) {
 		{
 			name: "invalid",
 			args: args{
-				s: "unkown-transport",
+				s: "unknown-transport",
 			},
 			wantErr: "not a valid Transport string",
 		},
@@ -65,7 +65,7 @@ func TestTransportFromString(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := transport.TransportFromString(tt.args.s)
+			got, err := transport.FromString(tt.args.s)
 			if tt.wantErr != "" {
 				if err == nil || err.Error() != tt.wantErr {
 					t.Errorf(
@@ -83,7 +83,7 @@ func TestTransportFromString(t *testing.T) {
 			}
 
 			if got != tt.want {
-				t.Errorf("test %q failed. Got %v, want %v", tt.name, got, tt.want)
+				t.Errorf("test %q failed. Got %q, want %q", tt.name, got, tt.want)
 			}
 		})
 	}
@@ -126,7 +126,7 @@ func TestTransport_MarshalText(t *testing.T) {
 			}
 
 			if got, want := "grpc", string(got); got != want {
-				t.Errorf("test %q failed. Got %v, want %v", tt.name, got, want)
+				t.Errorf("test %q failed. Got %q, want %q", tt.name, got, want)
 			}
 		})
 	}
@@ -185,7 +185,7 @@ func TestTransport_UnmarshalText(t *testing.T) {
 			}
 
 			if got := trans; got != tt.want {
-				t.Errorf("test %q failed. Got %v, want %v", tt.name, got, tt.want)
+				t.Errorf("test %q failed. Got %q, want %q", tt.name, got, tt.want)
 			}
 		})
 	}
@@ -239,7 +239,7 @@ func TestTransport_MarshalJSON(t *testing.T) {
 			}
 
 			if got := string(got); got != tt.want {
-				t.Errorf("test %q failed. Got %v, want %v", tt.name, got, tt.want)
+				t.Errorf("test %q failed. Got %q, want %q", tt.name, got, tt.want)
 			}
 		})
 	}
@@ -291,7 +291,7 @@ func TestTransport_UnmarshalJSON(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var gotMap map[string]transport.Transport
-			err := json.Unmarshal([]byte(tt.args.bytes), &gotMap)
+			err := json.Unmarshal(tt.args.bytes, &gotMap)
 			if tt.wantErr {
 				if err == nil {
 					t.Errorf("test %q failed. Expected an error", tt.name)
@@ -306,7 +306,7 @@ func TestTransport_UnmarshalJSON(t *testing.T) {
 			}
 
 			if got := gotMap["transport"]; got != tt.want {
-				t.Errorf("test %q failed. Got %v, want %v", tt.name, got, tt.want)
+				t.Errorf("test %q failed. Got %q, want %q", tt.name, got, tt.want)
 			}
 		})
 	}

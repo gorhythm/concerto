@@ -5,15 +5,15 @@
 package thrift
 
 import (
-	"github.com/gorhythm/concerto/sample/calc/concerto/message"
-	thrift "github.com/gorhythm/concerto/sample/calc/concerto/thrift/gen-go/concerto/sample/calculator/v1"
+	imessage "github.com/gorhythm/concerto/sample/calc/concerto/message"
+	iv1 "github.com/gorhythm/concerto/sample/calc/concerto/thrift/gen-go/concerto/sample/calculator/v1"
 )
 
 type Registry struct {
-	EncodeCalculateRequest  func(*message.CalculateRequest) (thrift.Op, int64, int64, error)
-	DecodeCalculateRequest  func(thrift.Op, int64, int64) (*message.CalculateRequest, error)
-	EncodeCalculateResponse func(*message.CalculateResponse) (int64, error)
-	DecodeCalculateResponse func(int64) (*message.CalculateResponse, error)
+	EncodeCalculateRequest  func(*imessage.CalculateRequest) (iv1.Op, int64, int64, error)
+	DecodeCalculateRequest  func(iv1.Op, int64, int64) (*imessage.CalculateRequest, error)
+	EncodeCalculateResponse func(*imessage.CalculateResponse) (int64, error)
+	DecodeCalculateResponse func(int64) (*imessage.CalculateResponse, error)
 }
 
 // DefaultRegistry is the default registry.
@@ -42,20 +42,20 @@ func NewRegistry(opts ...RegistryOption) *Registry {
 	return &reg
 }
 
-func encodeCalculateRequest(_obj *message.CalculateRequest) (op thrift.Op, num1 int64, num2 int64, err error) {
-	return thrift.EncodeCalculateRequest(_obj)
+func encodeCalculateRequest(req *imessage.CalculateRequest) (_op iv1.Op, _num1 int64, _num2 int64, err error) {
+	return iv1.EncodeCalculateRequest(req)
 }
 
-func decodeCalculateRequest(op thrift.Op, num1 int64, num2 int64) (*message.CalculateRequest, error) {
-	return thrift.DecodeCalculateRequest(op, num1, num2)
+func decodeCalculateRequest(_op iv1.Op, _num1 int64, _num2 int64) (req *imessage.CalculateRequest, err error) {
+	return iv1.DecodeCalculateRequest(_op, _num1, _num2)
 }
 
-func encodeCalculateResponse(_obj *message.CalculateResponse) (int64, error) {
-	return thrift.EncodeCalculateResponse(_obj)
+func encodeCalculateResponse(resp *imessage.CalculateResponse) (_result int64, err error) {
+	return iv1.EncodeCalculateResponse(resp)
 }
 
-func decodeCalculateResponse(result int64) (*message.CalculateResponse, error) {
-	return thrift.DecodeCalculateResponse(result)
+func decodeCalculateResponse(_result int64) (resp *imessage.CalculateResponse, err error) {
+	return iv1.DecodeCalculateResponse(_result)
 }
 
 // A RegistryOption sets options to Registry.
@@ -70,9 +70,7 @@ func (fn registryOptionFunc) apply(reg Registry) Registry {
 }
 
 func WithEncodeCalculateRequest(
-	fn func(
-		*message.CalculateRequest,
-	) (thrift.Op, int64, int64, error),
+	fn func(*imessage.CalculateRequest) (op iv1.Op, num1 int64, num2 int64, _ error),
 ) RegistryOption {
 	return registryOptionFunc(func(reg Registry) Registry {
 		reg.EncodeCalculateRequest = fn
@@ -81,9 +79,7 @@ func WithEncodeCalculateRequest(
 }
 
 func WithDecodeCalculateRequest(
-	fn func(
-		thrift.Op, int64, int64,
-	) (*message.CalculateRequest, error),
+	fn func(op iv1.Op, num1 int64, num2 int64) (*imessage.CalculateRequest, error),
 ) RegistryOption {
 	return registryOptionFunc(func(reg Registry) Registry {
 		reg.DecodeCalculateRequest = fn
@@ -92,9 +88,7 @@ func WithDecodeCalculateRequest(
 }
 
 func WithEncodeCalculateResponse(
-	fn func(
-		*message.CalculateResponse,
-	) (int64, error),
+	fn func(*imessage.CalculateResponse) (result int64, _ error),
 ) RegistryOption {
 	return registryOptionFunc(func(reg Registry) Registry {
 		reg.EncodeCalculateResponse = fn
@@ -103,9 +97,7 @@ func WithEncodeCalculateResponse(
 }
 
 func WithDecodeCalculateResponse(
-	fn func(
-		int64,
-	) (*message.CalculateResponse, error),
+	fn func(result int64) (*imessage.CalculateResponse, error),
 ) RegistryOption {
 	return registryOptionFunc(func(reg Registry) Registry {
 		reg.DecodeCalculateResponse = fn

@@ -5,32 +5,32 @@
 package v1
 
 import (
-	"github.com/gorhythm/concerto/sample/calc"
+	icalc "github.com/gorhythm/concerto/sample/calc"
 	"github.com/gorhythm/concerto/sample/calc/concerto/message"
 )
 
-func EncodeCalculateRequest(_obj *message.CalculateRequest) (op Op, num1 int64, num2 int64, err error) {
-	op = Op(_obj.Op)
-	num1 = _obj.Num1
-	num2 = _obj.Num2
+func EncodeCalculateRequest(req *message.CalculateRequest) (_op Op, _num1 int64, _num2 int64, err error) {
+	_op = Op(req.Op)
+	_num1 = req.Num1
+	_num2 = req.Num2
 
 	return
 }
 
-func DecodeCalculateRequest(op Op, num1 int64, num2 int64) (*message.CalculateRequest, error) {
+func DecodeCalculateRequest(_op Op, _num1 int64, _num2 int64) (*message.CalculateRequest, error) {
 	return &message.CalculateRequest{
-		Op:   calc.Op(op),
-		Num1: num1,
-		Num2: num2,
+		Op:   icalc.Op(_op),
+		Num1: _num1,
+		Num2: _num2,
 	}, nil
 }
 
-func EncodeCalculateResponse(_obj *message.CalculateResponse) (int64, error) {
-	return _obj.Result, nil
+func EncodeCalculateResponse(resp *message.CalculateResponse) (int64, error) {
+	return resp.Result, nil
 }
 
-func DecodeCalculateResponse(result int64) (*message.CalculateResponse, error) {
+func DecodeCalculateResponse(_result int64) (*message.CalculateResponse, error) {
 	return &message.CalculateResponse{
-		Result: result,
+		Result: _result,
 	}, nil
 }

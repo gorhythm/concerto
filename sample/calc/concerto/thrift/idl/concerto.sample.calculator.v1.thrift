@@ -2,8 +2,10 @@
 // This source code is licensed under the Apache 2.0 license found
 // in the LICENSE file in the root directory of this source tree.
 
+include "concerto.rpc.status.thrift"
+
 service CalculatorService {
-  i64 calculate(1: Op op, 2: i64 num1, 3: i64 num2)
+  i64 calculate(1: Op op, 2: i64 num1, 3: i64 num2) throws (1: concerto.rpc.status.Error e1)
 }
 
 // Op represents the type of arithmetic operation.

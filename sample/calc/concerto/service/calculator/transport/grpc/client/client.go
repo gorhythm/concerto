@@ -2,26 +2,29 @@
 // This source code is licensed under the Apache 2.0 license found
 // in the LICENSE file in the root directory of this source tree.
 
-package server
+package client
 
 import (
-	icontext "context"
-
+	ikitendpoint "github.com/go-kit/kit/endpoint"
 	ikitgrpc "github.com/go-kit/kit/transport/grpc"
+	igooglegrpc "google.golang.org/grpc"
 
 	iconcerto "github.com/gorhythm/concerto"
+	iconcertocallmeta "github.com/gorhythm/concerto/endpoint/middleware/callmeta"
 	iconcertotransport "github.com/gorhythm/concerto/transport"
 
-	icalc "github.com/gorhythm/concerto/sample/calc/concerto/proto/gen-go/concerto/sample/calc/v1"
+	icalc "github.com/gorhythm/concerto/sample/calc"
+	icalcpb "github.com/gorhythm/concerto/sample/calc/concerto/proto/gen-go/concerto/sample/calc/v1"
 	icalculator "github.com/gorhythm/concerto/sample/calc/concerto/service/calculator"
 	icalculatorendpoint "github.com/gorhythm/concerto/sample/calc/concerto/service/calculator/endpoint"
 	icalculatorgrpc "github.com/gorhythm/concerto/sample/calc/concerto/service/calculator/transport/grpc"
 )
 
-// config is a group of options for a Server.
+// config is a group of options for a Client.
 type config struct {
-	registry *icalculatorgrpc.Registry
-	options  []ikitgrpc.ServerOption
+	registry    *icalculatorgrpc.Registry
+	middlewares []ikitendpoint.Middleware
+	options     []ikitgrpc.ClientOption
 }
 
 // newConfig applies all the options to a returned config.
@@ -55,8 +58,17 @@ func WithRegistry(registry *icalculatorgrpc.Registry) Option {
 	})
 }
 
+func WithMiddlewares(
+	middlewares ...ikitendpoint.Middleware,
+) Option {
+	return optionFunc(func(c config) config {
+		c.middlewares = append(c.middlewares, middlewares...)
+		return c
+	})
+}
+
 func WithTransportOptions(
-	opts ...ikitgrpc.ServerOption,
+	opts ...ikitgrpc.ClientOption,
 ) Option {
 	return optionFunc(func(c config) config {
 		c.options = append(c.options, opts...)
@@ -64,42 +76,27 @@ func WithTransportOptions(
 	})
 }
 
-type server struct {
-	icalc.UnimplementedCalculatorServiceServer
-	calculatorHandler ikitgrpc.Handler
-}
-
-// New makes a set of endpoints available as a gRPC
-// CalculatorServiceServer.
-func New(endpoints *icalculatorendpoint.Set, opts ...Option) icalc.CalculatorServiceServer {
+// New returns an CalculatorService backed by a gRPC server at the other
+// end of the conn.
+func New(conn *igooglegrpc.ClientConn, opts ...Option) icalc.CalculatorService {
 	cfg := newConfig(opts...)
-	return &server{
-		calculatorHandler: ikitgrpc.NewServer(
-			endpoints.CalculateEndpoint,
-			cfg.registry.DecodeCalculateRequest,
-			cfg.registry.EncodeCalculateResponse,
-			cfg.options...,
-		),
-	}
-}
+	calculateEndpoint := ikitgrpc.NewClient(
+		conn,
+		"concerto.sample.calc.v1.CalculatorService",
+		"Calculate",
+		cfg.registry.EncodeCalculateRequest,
+		cfg.registry.DecodeCalculateResponse,
+		icalcpb.CalculateResponse{},
+		cfg.options...,
+	).Endpoint()
 
-func (s *server) Calculate(
-	ctx icontext.Context, req *icalc.CalculateRequest,
-) (*icalc.CalculateResponse, error) {
-	_, aResp, err := s.calculatorHandler.ServeGRPC(
-		iconcerto.ContextWithCallMeta(
-			ctx,
+	return &icalculatorendpoint.Set{
+		CalculateEndpoint: ikitendpoint.Chain(iconcertocallmeta.Middleware(
 			iconcerto.CallMeta{
 				Service:   icalculator.ServiceDesc.Service,
 				Method:    icalculator.ServiceDesc.Methods.Calculate.Name,
 				Transport: iconcertotransport.TransportGRPC,
 			},
-		),
-		req,
-	)
-	if err != nil {
-		return nil, err
+		), cfg.middlewares...)(calculateEndpoint),
 	}
-
-	return aResp.(*icalc.CalculateResponse), nil
 }

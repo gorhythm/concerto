@@ -5,29 +5,31 @@
 package client
 
 import (
-	"context"
+	icontext "context"
 
-	"github.com/apache/thrift/lib/go/thrift"
-	kitendpoint "github.com/go-kit/kit/endpoint"
+	ithrift "github.com/apache/thrift/lib/go/thrift"
+	ikitendpoint "github.com/go-kit/kit/endpoint"
 
-	"github.com/gorhythm/concerto"
-	"github.com/gorhythm/concerto/endpoint/middleware/callmeta"
-	"github.com/gorhythm/concerto/transport"
-	concertothrift "github.com/gorhythm/concerto/transport/thrift"
+	iconcerto "github.com/gorhythm/concerto"
+	iconcertocallmeta "github.com/gorhythm/concerto/endpoint/middleware/callmeta"
+	iconcertotransport "github.com/gorhythm/concerto/transport"
+	iconcertothrift "github.com/gorhythm/concerto/transport/thrift"
 
-	"github.com/gorhythm/concerto/sample/calc"
-	"github.com/gorhythm/concerto/sample/calc/concerto/message"
-	"github.com/gorhythm/concerto/sample/calc/concerto/service/calculator"
-	"github.com/gorhythm/concerto/sample/calc/concerto/service/calculator/endpoint"
-	calculatorthrift "github.com/gorhythm/concerto/sample/calc/concerto/service/calculator/transport/thrift"
-	thriftgen "github.com/gorhythm/concerto/sample/calc/concerto/thrift/gen-go/concerto/sample/calculator/v1"
+	icalc "github.com/gorhythm/concerto/sample/calc"
+	imessage "github.com/gorhythm/concerto/sample/calc/concerto/message"
+	icalculator "github.com/gorhythm/concerto/sample/calc/concerto/service/calculator"
+	icalculatorendpoint "github.com/gorhythm/concerto/sample/calc/concerto/service/calculator/endpoint"
+	icalculatorthrift "github.com/gorhythm/concerto/sample/calc/concerto/service/calculator/transport/thrift"
+	ithriftgen "github.com/gorhythm/concerto/sample/calc/concerto/thrift/gen-go/concerto/sample/calculator/v1"
 )
 
 // config is a group of options for a Client.
 type config struct {
-	registry    *calculatorthrift.Registry
-	middlewares []kitendpoint.Middleware
-	before      []concertothrift.ClientRequestFunc
+	registry    *icalculatorthrift.Registry
+	middlewares []ikitendpoint.Middleware
+	before      []iconcertothrift.ClientRequestFunc
+	after       []iconcertothrift.ClientResponseFunc
+	finalizer   []iconcertothrift.ClientFinalizerFunc
 }
 
 // newConfig applies all the options to a returned config.
@@ -38,7 +40,7 @@ func newConfig(opts ...Option) config {
 	}
 
 	if cfg.registry == nil {
-		cfg.registry = calculatorthrift.DefaultRegistry
+		cfg.registry = icalculatorthrift.DefaultRegistry
 	}
 	return cfg
 }
@@ -54,7 +56,7 @@ func (fn optionFunc) apply(cfg config) config {
 	return fn(cfg)
 }
 
-func WithRegistry(registry *calculatorthrift.Registry) Option {
+func WithRegistry(registry *icalculatorthrift.Registry) Option {
 	return optionFunc(func(c config) config {
 		c.registry = registry
 		return c
@@ -62,7 +64,7 @@ func WithRegistry(registry *calculatorthrift.Registry) Option {
 }
 
 func WithMiddlewares(
-	middlewares ...kitendpoint.Middleware,
+	middlewares ...ikitendpoint.Middleware,
 ) Option {
 	return optionFunc(func(c config) config {
 		c.middlewares = append(c.middlewares, middlewares...)
@@ -70,8 +72,8 @@ func WithMiddlewares(
 	})
 }
 
-func WithClientBefore(
-	before ...concertothrift.ClientRequestFunc,
+func WithBefore(
+	before ...iconcertothrift.ClientRequestFunc,
 ) Option {
 	return optionFunc(func(c config) config {
 		c.before = append(c.before, before...)
@@ -79,45 +81,80 @@ func WithClientBefore(
 	})
 }
 
-// New returns an CalculatorService backed by a gRPC server at the other
-// end of the conn.
-func New(client *thriftgen.CalculatorServiceClient, opts ...Option) calc.CalculatorService {
-	cfg := newConfig(opts...)
+func WithAfter(
+	after ...iconcertothrift.ClientResponseFunc,
+) Option {
+	return optionFunc(func(c config) config {
+		c.after = append(c.after, after...)
+		return c
+	})
+}
 
-	calculateEndpoint := func(_ctx context.Context, _req any) (any, error) {
-		op, num1, num2, err := cfg.registry.EncodeCalculateRequest(
-			_req.(*message.CalculateRequest),
+func WithFinalizer(fn ...iconcertothrift.ClientFinalizerFunc) Option {
+	return optionFunc(func(c config) config {
+		c.finalizer = append(c.finalizer, fn...)
+		return c
+	})
+}
+
+// New returns an CalculatorService backed by a Thrift client at the other
+// end of the conn.
+func New(tclient ithrift.TClient, opts ...Option) icalc.CalculatorService {
+	var (
+		client = ithriftgen.NewCalculatorServiceClient(
+			iconcertothrift.ExtractResponseMeta(tclient),
+		)
+		cfg = newConfig(opts...)
+	)
+
+	calculateEndpoint := func(ctx icontext.Context, aReq any) (_ any, err error) {
+		ctx, cancel := icontext.WithCancel(ctx)
+		defer cancel()
+
+		if cfg.finalizer != nil {
+			defer func() {
+				for _, _f := range cfg.finalizer {
+					_f(ctx, err)
+				}
+			}()
+		}
+
+		_op, _num1, _num2, err := cfg.registry.EncodeCalculateRequest(
+			aReq.(*imessage.CalculateRequest),
 		)
 		if err != nil {
 			return nil, err
 		}
 
-		_hm := thrift.THeaderMap{}
-		for _, fn := range cfg.before {
-			fn(_ctx, _hm)
+		reqMD := iconcertothrift.Metadata{
+			Header: iconcertothrift.HeaderMap{},
+		}
+		for _, _f := range cfg.before {
+			_f(ctx, &reqMD)
 		}
 
-		_hmKeys := make([]string, 0, len(_hm))
-		for k, v := range _hm {
-			thrift.SetHeader(_ctx, k, v)
-			_hmKeys = append(_hmKeys, k)
-		}
-		thrift.SetWriteHeaderList(_ctx, _hmKeys)
-
-		_resp, err := client.Calculate(_ctx, op, num1, num2)
+		var respMD iconcertothrift.Metadata
+		r, err := client.Calculate(
+			iconcertothrift.ContextWithResponseMeta(ctx, &respMD),
+			_op, _num1, _num2,
+		)
 		if err != nil {
 			return nil, err
 		}
 
-		return cfg.registry.DecodeCalculateResponse(_resp)
+		for _, fn := range cfg.after {
+			ctx = fn(ctx, respMD)
+		}
+
+		return cfg.registry.DecodeCalculateResponse(r)
 	}
 
-	return &endpoint.Set{
-		CalculateEndpoint: kitendpoint.Chain(callmeta.Middleware(
-			concerto.CallMeta{
-				Service:   calculator.ServiceDesc.Service,
-				Method:    calculator.ServiceDesc.Methods.Calculate.Name,
-				Transport: transport.TransportThrift,
+	return &icalculatorendpoint.Set{
+		CalculateEndpoint: ikitendpoint.Chain(iconcertocallmeta.Middleware(
+			iconcerto.CallMeta{
+				Service:   icalculator.ServiceDesc.Service,
+				Method:    icalculator.ServiceDesc.Methods.Calculate.Name,
+				Transport: iconcertotransport.TransportThrift,
 			},
 		), cfg.middlewares...)(calculateEndpoint),
 	}

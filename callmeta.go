@@ -13,10 +13,10 @@ import (
 	"github.com/gorhythm/concerto/transport"
 )
 
-type contextKeyType int
+type contextKey int
 
 const (
-	callMetaKey contextKeyType = iota
+	contextKeyCallMeta contextKey = iota
 )
 
 var (
@@ -26,7 +26,7 @@ var (
 
 // ContextWithCallMeta returns a copy of ctx with v set as the call meta value.
 func ContextWithCallMeta(ctx context.Context, v CallMeta) context.Context {
-	return context.WithValue(ctx, callMetaKey, v)
+	return context.WithValue(ctx, contextKeyCallMeta, v)
 }
 
 // CallMetaFromContext returns the call meta from ctx.
@@ -35,7 +35,7 @@ func CallMetaFromContext(ctx context.Context) CallMeta {
 		return NilCallMeta
 	}
 
-	if v, ok := ctx.Value(callMetaKey).(CallMeta); ok {
+	if v, ok := ctx.Value(contextKeyCallMeta).(CallMeta); ok {
 		return v
 	}
 

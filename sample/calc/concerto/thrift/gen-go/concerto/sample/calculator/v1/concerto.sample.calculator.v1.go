@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"time"
 	thrift "github.com/apache/thrift/lib/go/thrift"
+	"github.com/gorhythm/concerto/sample/calc/concerto/thrift/gen-go/concerto/rpc/status"
+
 )
 
 // (needed to ensure safety because of naive import list construction.)
@@ -19,6 +21,7 @@ var _ = context.Background
 var _ = time.Now
 var _ = bytes.Equal
 
+var _ = status.GoUnusedProtection__
 type Op int64
 const (
   Op_ADD Op = 0
@@ -91,9 +94,9 @@ type CalculatorServiceClient struct {
   meta thrift.ResponseMeta
 }
 
-func NewCalculatorServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *CalculatorServiceClient {
+func NewCalculatorServiceClientFactory(t thrift.TTransport, fn thrift.TProtocolFactory) *CalculatorServiceClient {
   return &CalculatorServiceClient{
-    c: thrift.NewTStandardClient(f.GetProtocol(t), f.GetProtocol(t)),
+    c: thrift.NewTStandardClient(fn.GetProtocol(t), fn.GetProtocol(t)),
   }
 }
 
@@ -137,6 +140,11 @@ func (p *CalculatorServiceClient) Calculate(ctx context.Context, op Op, num1 int
   if _err != nil {
     return
   }
+  switch {
+  case _result2.E1!= nil:
+    return _r, _result2.E1
+  }
+
   return _result2.GetSuccess(), nil
 }
 
@@ -230,6 +238,10 @@ func (p *calculatorServiceProcessorCalculate) Process(ctx context.Context, seqId
   var retval int64
   if retval, err2 = p.handler.Calculate(ctx, args.Op, args.Num1, args.Num2); err2 != nil {
     tickerCancel()
+  switch v := err2.(type) {
+    case *status.Error:
+  result.E1 = v
+    default:
     if err2 == thrift.ErrAbandonRequest {
       return false, thrift.WrapTException(err2)
     }
@@ -239,6 +251,7 @@ func (p *calculatorServiceProcessorCalculate) Process(ctx context.Context, seqId
     oprot.WriteMessageEnd(ctx)
     oprot.Flush(ctx)
     return true, thrift.WrapTException(err2)
+  }
   } else {
     result.Success = &retval
   }
@@ -430,8 +443,10 @@ func (p *CalculatorServiceCalculateArgs) String() string {
 
 // Attributes:
 //  - Success
+//  - E1
 type CalculatorServiceCalculateResult struct {
   Success *int64 `thrift:"success,0" db:"success" json:"success,omitempty"`
+  E1 *status.Error `thrift:"e1,1" db:"e1" json:"e1,omitempty"`
 }
 
 func NewCalculatorServiceCalculateResult() *CalculatorServiceCalculateResult {
@@ -445,8 +460,19 @@ func (p *CalculatorServiceCalculateResult) GetSuccess() int64 {
   }
 return *p.Success
 }
+var CalculatorServiceCalculateResult_E1_DEFAULT *status.Error
+func (p *CalculatorServiceCalculateResult) GetE1() *status.Error {
+  if !p.IsSetE1() {
+    return CalculatorServiceCalculateResult_E1_DEFAULT
+  }
+return p.E1
+}
 func (p *CalculatorServiceCalculateResult) IsSetSuccess() bool {
   return p.Success != nil
+}
+
+func (p *CalculatorServiceCalculateResult) IsSetE1() bool {
+  return p.E1 != nil
 }
 
 func (p *CalculatorServiceCalculateResult) Read(ctx context.Context, iprot thrift.TProtocol) error {
@@ -465,6 +491,16 @@ func (p *CalculatorServiceCalculateResult) Read(ctx context.Context, iprot thrif
     case 0:
       if fieldTypeId == thrift.I64 {
         if err := p.ReadField0(ctx, iprot); err != nil {
+          return err
+        }
+      } else {
+        if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+          return err
+        }
+      }
+    case 1:
+      if fieldTypeId == thrift.STRUCT {
+        if err := p.ReadField1(ctx, iprot); err != nil {
           return err
         }
       } else {
@@ -496,11 +532,20 @@ func (p *CalculatorServiceCalculateResult)  ReadField0(ctx context.Context, ipro
   return nil
 }
 
+func (p *CalculatorServiceCalculateResult)  ReadField1(ctx context.Context, iprot thrift.TProtocol) error {
+  p.E1 = &status.Error{}
+  if err := p.E1.Read(ctx, iprot); err != nil {
+    return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", p.E1), err)
+  }
+  return nil
+}
+
 func (p *CalculatorServiceCalculateResult) Write(ctx context.Context, oprot thrift.TProtocol) error {
   if err := oprot.WriteStructBegin(ctx, "calculate_result"); err != nil {
     return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err) }
   if p != nil {
     if err := p.writeField0(ctx, oprot); err != nil { return err }
+    if err := p.writeField1(ctx, oprot); err != nil { return err }
   }
   if err := oprot.WriteFieldStop(ctx); err != nil {
     return thrift.PrependError("write field stop error: ", err) }
@@ -517,6 +562,19 @@ func (p *CalculatorServiceCalculateResult) writeField0(ctx context.Context, opro
     return thrift.PrependError(fmt.Sprintf("%T.success (0) field write error: ", p), err) }
     if err := oprot.WriteFieldEnd(ctx); err != nil {
       return thrift.PrependError(fmt.Sprintf("%T write field end error 0:success: ", p), err) }
+  }
+  return err
+}
+
+func (p *CalculatorServiceCalculateResult) writeField1(ctx context.Context, oprot thrift.TProtocol) (err error) {
+  if p.IsSetE1() {
+    if err := oprot.WriteFieldBegin(ctx, "e1", thrift.STRUCT, 1); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field begin error 1:e1: ", p), err) }
+    if err := p.E1.Write(ctx, oprot); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T error writing struct: ", p.E1), err)
+    }
+    if err := oprot.WriteFieldEnd(ctx); err != nil {
+      return thrift.PrependError(fmt.Sprintf("%T write field end error 1:e1: ", p), err) }
   }
   return err
 }

@@ -5,17 +5,17 @@
 package grpc
 
 import (
-	"context"
+	icontext "context"
 
-	"github.com/gorhythm/concerto/sample/calc/concerto/message"
-	"github.com/gorhythm/concerto/sample/calc/concerto/proto/gen-go/concerto/sample/calc/v1"
+	imessage "github.com/gorhythm/concerto/sample/calc/concerto/message"
+	icalc "github.com/gorhythm/concerto/sample/calc/concerto/proto/gen-go/concerto/sample/calc/v1"
 )
 
 type Registry struct {
-	EncodeCalculateRequest  func(context.Context, any) (any, error)
-	DecodeCalculateRequest  func(context.Context, any) (any, error)
-	EncodeCalculateResponse func(context.Context, any) (any, error)
-	DecodeCalculateResponse func(context.Context, any) (any, error)
+	EncodeCalculateRequest  func(icontext.Context, any) (any, error)
+	DecodeCalculateRequest  func(icontext.Context, any) (any, error)
+	EncodeCalculateResponse func(icontext.Context, any) (any, error)
+	DecodeCalculateResponse func(icontext.Context, any) (any, error)
 }
 
 // DefaultRegistry is the default registry.
@@ -43,20 +43,20 @@ func NewRegistry(opts ...RegistryOption) *Registry {
 	return &reg
 }
 
-func encodeCalculateRequest(ctx context.Context, obj any) (any, error) {
-	return calc.EncodeCalculateRequest(obj.(*message.CalculateRequest))
+func encodeCalculateRequest(_ icontext.Context, aReq any) (any, error) {
+	return icalc.EncodeCalculateRequest(aReq.(*imessage.CalculateRequest))
 }
 
-func decodeCalculateRequest(ctx context.Context, obj any) (any, error) {
-	return calc.DecodeCalculateRequest(obj.(*calc.CalculateRequest))
+func decodeCalculateRequest(_ icontext.Context, aReq any) (any, error) {
+	return icalc.DecodeCalculateRequest(aReq.(*icalc.CalculateRequest))
 }
 
-func encodeCalculateResponse(ctx context.Context, obj any) (any, error) {
-	return calc.EncodeCalculateResponse(obj.(*message.CalculateResponse))
+func encodeCalculateResponse(_ icontext.Context, aResp any) (any, error) {
+	return icalc.EncodeCalculateResponse(aResp.(*imessage.CalculateResponse))
 }
 
-func decodeCalculateResponse(ctx context.Context, obj any) (any, error) {
-	return calc.DecodeCalculateResponse(obj.(*calc.CalculateResponse))
+func decodeCalculateResponse(_ icontext.Context, aResp any) (any, error) {
+	return icalc.DecodeCalculateResponse(aResp.(*icalc.CalculateResponse))
 }
 
 // A RegistryOption sets options to Registry.
@@ -72,14 +72,14 @@ func (fn registryOptionFunc) apply(reg Registry) Registry {
 
 func WithEncodeCalculateRequest(
 	fn func(
-		context.Context, *message.CalculateRequest,
-	) (*calc.CalculateRequest, error),
+		icontext.Context, *imessage.CalculateRequest,
+	) (*icalc.CalculateRequest, error),
 ) RegistryOption {
 	return registryOptionFunc(func(reg Registry) Registry {
 		reg.EncodeCalculateRequest = func(
-			ctx context.Context, obj any,
+			ctx icontext.Context, obj any,
 		) (any, error) {
-			return fn(ctx, obj.(*message.CalculateRequest))
+			return fn(ctx, obj.(*imessage.CalculateRequest))
 		}
 		return reg
 	})
@@ -87,14 +87,14 @@ func WithEncodeCalculateRequest(
 
 func WithDecodeCalculateRequest(
 	fn func(
-		context.Context, *calc.CalculateRequest,
-	) (*message.CalculateRequest, error),
+		icontext.Context, *icalc.CalculateRequest,
+	) (*imessage.CalculateRequest, error),
 ) RegistryOption {
 	return registryOptionFunc(func(reg Registry) Registry {
 		reg.DecodeCalculateRequest = func(
-			ctx context.Context, obj any,
+			ctx icontext.Context, obj any,
 		) (any, error) {
-			return fn(ctx, obj.(*calc.CalculateRequest))
+			return fn(ctx, obj.(*icalc.CalculateRequest))
 		}
 		return reg
 	})
@@ -102,14 +102,14 @@ func WithDecodeCalculateRequest(
 
 func WithEncodeCalculateResponse(
 	fn func(
-		context.Context, *message.CalculateResponse,
-	) (*calc.CalculateResponse, error),
+		icontext.Context, *imessage.CalculateResponse,
+	) (*icalc.CalculateResponse, error),
 ) RegistryOption {
 	return registryOptionFunc(func(reg Registry) Registry {
 		reg.EncodeCalculateResponse = func(
-			ctx context.Context, obj any,
+			ctx icontext.Context, obj any,
 		) (any, error) {
-			return fn(ctx, obj.(*message.CalculateResponse))
+			return fn(ctx, obj.(*imessage.CalculateResponse))
 		}
 		return reg
 	})
@@ -117,14 +117,14 @@ func WithEncodeCalculateResponse(
 
 func WithDecodeCalculateResponse(
 	fn func(
-		context.Context, *calc.CalculateResponse,
-	) (*message.CalculateResponse, error),
+		icontext.Context, *icalc.CalculateResponse,
+	) (*imessage.CalculateResponse, error),
 ) RegistryOption {
 	return registryOptionFunc(func(reg Registry) Registry {
 		reg.DecodeCalculateResponse = func(
-			ctx context.Context, obj any,
+			ctx icontext.Context, obj any,
 		) (any, error) {
-			return fn(ctx, obj.(*calc.CalculateResponse))
+			return fn(ctx, obj.(*icalc.CalculateResponse))
 		}
 		return reg
 	})

@@ -29,14 +29,17 @@ func TestMiddleware(t *testing.T) {
 		got  concerto.CallMeta
 	)
 
-	callmeta.Middleware(args.callMeta)(
+	_, err := callmeta.Middleware(args.callMeta)(
 		func(ctx context.Context, _ any) (any, error) {
 			got = concerto.CallMetaFromContext(ctx)
 			return struct{}{}, nil
 		},
 	)(context.Background(), struct{}{})
+	if err != nil {
+		t.Fatalf("test failed. Didn't expect an error, got %q", err)
+	}
 
 	if !reflect.DeepEqual(got, want) {
-		t.Errorf("test failed. Got %v, want %v", got, want)
+		t.Errorf("test failed. Got %+v, want %+v", got, want)
 	}
 }

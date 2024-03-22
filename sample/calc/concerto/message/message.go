@@ -4,14 +4,14 @@
 
 package message
 
-import "github.com/gorhythm/concerto/sample/calc"
+import icalc "github.com/gorhythm/concerto/sample/calc"
 
 type CalculateRequest struct {
-	Op   calc.Op
-	Num1 int64
-	Num2 int64
+	Op   icalc.Op `json:"op"`
+	Num1 int64    `json:"num1"`
+	Num2 int64    `json:"num2"`
 }
 
 type CalculateResponse struct {
-	Result int64
+	Result int64 `json:"result"`
 }

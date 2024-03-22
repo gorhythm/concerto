@@ -22,7 +22,7 @@ func ExampleWithMiddlewares() {
 		),
 	)
 
-	e := cfg.ApplyMiddlewares(myEndpoint)
+	e := cfg.Middleware()(myEndpoint)
 	if _, err := e(context.Background(), struct{}{}); err != nil {
 		panic(err)
 	}

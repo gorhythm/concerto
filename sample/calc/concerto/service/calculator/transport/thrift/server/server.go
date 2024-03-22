@@ -5,23 +5,29 @@
 package server
 
 import (
-	"context"
+	icontext "context"
 
-	"github.com/gorhythm/concerto"
-	"github.com/gorhythm/concerto/transport"
-	concertothrift "github.com/gorhythm/concerto/transport/thrift"
+	ithrift "github.com/apache/thrift/lib/go/thrift"
+	ikittransport "github.com/go-kit/kit/transport"
 
-	"github.com/gorhythm/concerto/sample/calc/concerto/message"
-	"github.com/gorhythm/concerto/sample/calc/concerto/service/calculator"
-	"github.com/gorhythm/concerto/sample/calc/concerto/service/calculator/endpoint"
-	"github.com/gorhythm/concerto/sample/calc/concerto/service/calculator/transport/thrift"
-	thriftgen "github.com/gorhythm/concerto/sample/calc/concerto/thrift/gen-go/concerto/sample/calculator/v1"
+	iconcerto "github.com/gorhythm/concerto"
+	iconcertotransport "github.com/gorhythm/concerto/transport"
+	iconcertothrift "github.com/gorhythm/concerto/transport/thrift"
+
+	imessage "github.com/gorhythm/concerto/sample/calc/concerto/message"
+	icalculator "github.com/gorhythm/concerto/sample/calc/concerto/service/calculator"
+	icalculatorendpoint "github.com/gorhythm/concerto/sample/calc/concerto/service/calculator/endpoint"
+	icalculatorthrift "github.com/gorhythm/concerto/sample/calc/concerto/service/calculator/transport/thrift"
+	ithriftgen "github.com/gorhythm/concerto/sample/calc/concerto/thrift/gen-go/concerto/sample/calculator/v1"
 )
 
 // config is a group of options for a Server.
 type config struct {
-	registry *thrift.Registry
-	before   []concertothrift.ServerRequestFunc
+	registry     *icalculatorthrift.Registry
+	before       []iconcertothrift.ServerRequestFunc
+	after        []iconcertothrift.ServerResponseFunc
+	finalizer    []iconcertothrift.ServerFinalizerFunc
+	errorHandler ikittransport.ErrorHandler
 }
 
 // newConfig applies all the options to a returned config.
@@ -32,7 +38,7 @@ func newConfig(opts ...Option) config {
 	}
 
 	if cfg.registry == nil {
-		cfg.registry = thrift.DefaultRegistry
+		cfg.registry = icalculatorthrift.DefaultRegistry
 	}
 	return cfg
 }
@@ -48,15 +54,15 @@ func (fn optionFunc) apply(cfg config) config {
 	return fn(cfg)
 }
 
-func WithRegistry(registry *thrift.Registry) Option {
+func WithRegistry(registry *icalculatorthrift.Registry) Option {
 	return optionFunc(func(c config) config {
 		c.registry = registry
 		return c
 	})
 }
 
-func WithServerBefore(
-	before ...concertothrift.ServerRequestFunc,
+func WithBefore(
+	before ...iconcertothrift.ServerRequestFunc,
 ) Option {
 	return optionFunc(func(c config) config {
 		c.before = append(c.before, before...)
@@ -64,48 +70,114 @@ func WithServerBefore(
 	})
 }
 
+func WithAfter(
+	after ...iconcertothrift.ServerResponseFunc,
+) Option {
+	return optionFunc(func(c config) config {
+		c.after = append(c.after, after...)
+		return c
+	})
+}
+
+func WithErrorHandler(errorHandler ikittransport.ErrorHandler) Option {
+	return optionFunc(func(c config) config {
+		c.errorHandler = errorHandler
+		return c
+	})
+}
+
+func WithFinalizer(fn ...iconcertothrift.ServerFinalizerFunc) Option {
+	return optionFunc(func(c config) config {
+		c.finalizer = append(c.finalizer, fn...)
+		return c
+	})
+}
+
 type server struct {
-	cfg       config
-	endpoints *endpoint.Set
+	registry     *icalculatorthrift.Registry
+	before       []iconcertothrift.ServerRequestFunc
+	after        []iconcertothrift.ServerResponseFunc
+	finalizer    []iconcertothrift.ServerFinalizerFunc
+	errorHandler ikittransport.ErrorHandler
+	endpoints    *icalculatorendpoint.Set
 }
 
 // New makes a set of endpoints available as a Thrift service.
-func New(endpoints *endpoint.Set, opts ...Option) thriftgen.CalculatorService {
+func New(endpoints *icalculatorendpoint.Set, opts ...Option) ithriftgen.CalculatorService {
 	cfg := newConfig(opts...)
 	return &server{
-		cfg:       cfg,
-		endpoints: endpoints,
+		registry:     cfg.registry,
+		before:       cfg.before,
+		after:        cfg.after,
+		finalizer:    cfg.finalizer,
+		errorHandler: cfg.errorHandler,
+		endpoints:    endpoints,
 	}
 }
 
 func (s *server) Calculate(
-	ctx context.Context, op thriftgen.Op, num1 int64, num2 int64,
-) (result int64, err error) {
-	req, err := s.cfg.registry.DecodeCalculateRequest(op, num1, num2)
+	ctx icontext.Context, _op ithriftgen.Op, _num1 int64, _num2 int64,
+) (_result int64, err error) {
+	req, err := s.registry.DecodeCalculateRequest(_op, _num1, _num2)
 	if err != nil {
 		return 0, err
 	}
 
-	for _, f := range s.cfg.before {
-		ctx = f(ctx)
+	if len(s.finalizer) > 0 {
+		defer func() {
+			for _, _f := range s.finalizer {
+				_f(ctx, err)
+			}
+		}()
 	}
 
-	resp, err := s.endpoints.CalculateEndpoint(
-		concerto.ContextWithCallMeta(
+	reqMD := iconcertothrift.Metadata{
+		Header: iconcertothrift.NewHeaderContext(ctx),
+	}
+	for _, _f := range s.before {
+		ctx = _f(ctx, reqMD)
+	}
+
+	aResp, err := s.endpoints.CalculateEndpoint(
+		iconcerto.ContextWithCallMeta(
 			ctx,
-			concerto.CallMeta{
-				Service:   calculator.ServiceDesc.Service,
-				Method:    calculator.ServiceDesc.Methods.Calculate.Name,
-				Transport: transport.TransportThrift,
+			iconcerto.CallMeta{
+				Service:   icalculator.ServiceDesc.Service,
+				Method:    icalculator.ServiceDesc.Methods.Calculate.Name,
+				Transport: iconcertotransport.TransportThrift,
 			},
 		),
 		req,
 	)
 	if err != nil {
+		s.errorHandler.Handle(ctx, err)
 		return 0, err
 	}
 
-	return s.cfg.registry.EncodeCalculateResponse(
-		resp.(*message.CalculateResponse),
+	respMD := iconcertothrift.Metadata{
+		Header: iconcertothrift.HeaderMap{},
+	}
+
+	for _, fn := range s.after {
+		ctx = fn(ctx, &respMD)
+	}
+
+	respHeader := respMD.Header.(iconcertothrift.HeaderMap)
+	if len(respHeader) > 0 {
+		if helper, ok := ithrift.GetResponseHelper(ctx); ok {
+			for k, v := range respHeader {
+				helper.SetHeader(k, v)
+			}
+		}
+	}
+
+	resp, err := s.registry.EncodeCalculateResponse(
+		aResp.(*imessage.CalculateResponse),
 	)
+	if err != nil {
+		s.errorHandler.Handle(ctx, err)
+		return 0, err
+	}
+
+	return resp, nil
 }

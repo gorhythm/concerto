@@ -25,7 +25,7 @@ func TestCallMeta_FullMethod(t *testing.T) {
 	got := callMeta.FullMethod()
 
 	if got != want {
-		t.Errorf("test failed. Got %v, want %v", got, want)
+		t.Errorf("test failed. Got %q, want %q", got, want)
 	}
 }
 
@@ -70,7 +70,7 @@ func TestCallMetaFromContext(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := concerto.CallMetaFromContext(tt.args.ctx); got != tt.want {
 				t.Errorf(
-					"test %q failed. Got %v, want %v",
+					"test %q failed. Got %+v, want %+v",
 					tt.name, got, tt.want,
 				)
 			}
@@ -90,6 +90,6 @@ func TestContextWithCallMeta(t *testing.T) {
 	)
 
 	if got != want {
-		t.Errorf("test failed. Got %v, want %v", got, want)
+		t.Errorf("test failed. Got %+v, want %+v", got, want)
 	}
 }

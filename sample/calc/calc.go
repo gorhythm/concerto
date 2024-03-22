@@ -18,7 +18,7 @@ import (
 //concerto:service http:"/v1/calculator"
 type CalculatorService interface {
 	//concerto:method grpc:"Calculate"
-	//concerto:method thrift:"Calculate"
+	//concerto:method thrift:"Calculate,exceptions=1:concerto.rpc.status.Error"
 	//concerto:method http:"POST /calculate,additional_routes=POST calculate/{op}/{num1}/{num2}"
 	Calculate(
 		ctx context.Context,
@@ -85,6 +85,6 @@ func (s *calculatorService) Calculate(
 		}
 		return num1 / num2, nil
 	default:
-		return 0, fmt.Errorf("invalid operator: %v", op)
+		return 0, fmt.Errorf("invalid operator: %s", op)
 	}
 }

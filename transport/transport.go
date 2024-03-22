@@ -53,8 +53,8 @@ func (t Transport) IsValid() bool {
 	return found
 }
 
-// TransportFromString converts a string to a Transport value.
-func TransportFromString(s string) (Transport, error) {
+// FromString converts a string to a Transport value.
+func FromString(s string) (Transport, error) {
 	if v, ok := transportValue[s]; ok {
 		return v, nil
 	}
@@ -73,7 +73,7 @@ func (t Transport) MarshalText() ([]byte, error) {
 
 // UnmarshalText converts text to a Transport value.
 func (t *Transport) UnmarshalText(text []byte) error {
-	v, err := TransportFromString(string(text))
+	v, err := FromString(string(text))
 	if err != nil {
 		return err
 	}
@@ -97,7 +97,7 @@ func (t *Transport) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	v, err := TransportFromString(str)
+	v, err := FromString(str)
 	if err != nil {
 		return err
 	}

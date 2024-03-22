@@ -20,7 +20,6 @@ import (
 	"github.com/gorhythm/concerto/sample/calc"
 	grpcclient "github.com/gorhythm/concerto/sample/calc/concerto/service/calculator/transport/grpc/client"
 	thriftclient "github.com/gorhythm/concerto/sample/calc/concerto/service/calculator/transport/thrift/client"
-	thriftgen "github.com/gorhythm/concerto/sample/calc/concerto/thrift/gen-go/concerto/sample/calculator/v1"
 )
 
 func main() {
@@ -68,7 +67,10 @@ func main() {
 		defer tTransport.Close()
 
 		clients[transport.TransportThrift] = thriftclient.New(
-			thriftgen.NewCalculatorServiceClientFactory(tTransport, protocolFactory),
+			thrift.NewTStandardClient(
+				protocolFactory.GetProtocol(tTransport),
+				protocolFactory.GetProtocol(tTransport),
+			),
 		)
 	}
 

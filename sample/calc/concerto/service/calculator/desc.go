@@ -5,21 +5,21 @@
 package calculator
 
 import (
-	concerto "github.com/gorhythm/concerto"
+	iconcerto "github.com/gorhythm/concerto"
 )
 
 // ServiceDesc is the description for CalculatorService service.
 var ServiceDesc = struct {
 	Service string
 	Methods struct {
-		Calculate concerto.MethodInfo
+		Calculate iconcerto.MethodInfo
 	}
 }{
 	Service: "concerto.sample.calc.v1.CalculatorService",
 	Methods: struct {
-		Calculate concerto.MethodInfo
+		Calculate iconcerto.MethodInfo
 	}{
-		Calculate: concerto.MethodInfo{
+		Calculate: iconcerto.MethodInfo{
 			Name:     "Calculate",
 			FullName: "concerto.sample.calc.v1.CalculatorService/Calculate",
 		},

@@ -5,62 +5,65 @@
 package endpoint
 
 import (
-	"context"
+	icontext "context"
 
-	kitendpoint "github.com/go-kit/kit/endpoint"
+	ikitendpoint "github.com/go-kit/kit/endpoint"
 
-	"github.com/gorhythm/concerto/endpoint"
+	iconcertoendpoint "github.com/gorhythm/concerto/endpoint"
 
-	"github.com/gorhythm/concerto/sample/calc"
-	"github.com/gorhythm/concerto/sample/calc/concerto/message"
+	icalc "github.com/gorhythm/concerto/sample/calc"
+	imessage "github.com/gorhythm/concerto/sample/calc/concerto/message"
 )
 
 // Set collects all of the endpoints that compose a CalculatorService. It's
 // meant to be used as a helper struct, to collect all of the endpoints into a
 // single parameter.
 type Set struct {
-	CalculateEndpoint kitendpoint.Endpoint
+	CalculateEndpoint ikitendpoint.Endpoint
 }
 
-var _ calc.CalculatorService = &Set{}
+var _ icalc.CalculatorService = &Set{}
 
 // New constructs and returns a new instance of [Set].
 func New(
-	svc calc.CalculatorService, opts ...endpoint.Option,
+	svc icalc.CalculatorService, opts ...iconcertoendpoint.Option,
 ) *Set {
 	var (
-		cfg       = endpoint.NewConfig(opts...)
-		endpoints = Set{}
+		cfg = iconcertoendpoint.NewConfig(opts...)
+		set = Set{}
 	)
 	{
 		e := func(
-			ctx context.Context, req any,
+			ctx icontext.Context, aReq any,
 		) (any, error) {
-			_req := req.(*message.CalculateRequest)
-			_result, err := svc.Calculate(ctx, _req.Op, _req.Num1, _req.Num2)
+			req := aReq.(*imessage.CalculateRequest)
+			result, err := svc.Calculate(ctx, req.Op, req.Num1, req.Num2)
 			if err != nil {
 				return nil, err
 			}
 
-			return &message.CalculateResponse{Result: _result}, err
+			return &imessage.CalculateResponse{Result: result}, err
 		}
-		endpoints.CalculateEndpoint = cfg.ApplyMiddlewares(e)
+		if middleware := cfg.Middleware(); middleware != nil {
+			e = middleware(e)
+		}
+		set.CalculateEndpoint = e
 	}
 
-	return &endpoints
+	return &set
 }
 
 // Calculate implements the CalculatorService interface, so Set may be used as
-// a service. This is primarily useful in the context of a client library.
-func (e *Set) Calculate(
-	ctx context.Context, op calc.Op, num1 int64, num2 int64,
+// a service. This is primarily useful in the icontext of a client library.
+func (s *Set) Calculate(
+	ctx icontext.Context, _op icalc.Op, _num1 int64, _num2 int64,
 ) (int64, error) {
-	resp, err := e.CalculateEndpoint(
+	aResp, err := s.CalculateEndpoint(
 		ctx,
-		&message.CalculateRequest{
-			Op:   op,
-			Num1: num1,
-			Num2: num2,
+		&imessage.CalculateRequest{
+			Op:   _op,
+			Num1: _num1,
+			Num2: _num2,
 		},
 	)
 
@@ -68,5 +71,5 @@ func (e *Set) Calculate(
 		return 0, err
 	}
 
-	return resp.(*message.CalculateResponse).Result, err
+	return aResp.(*imessage.CalculateResponse).Result, err
 }
