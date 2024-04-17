@@ -43,7 +43,7 @@ func newConfig(opts ...Option) config {
 	return cfg
 }
 
-// A Option sets options to config.
+// An Option sets options to config.
 type Option interface {
 	apply(config) config
 }
